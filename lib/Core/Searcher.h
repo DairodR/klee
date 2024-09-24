@@ -13,15 +13,21 @@
 #include "ExecutionState.h"
 #include "ExecutionTree.h"
 #include "klee/ADT/RNG.h"
+#include "klee/Module/KModule.h"
 #include "klee/System/Time.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
+
+#include <igraph/igraph_types.h>
+#include <llvm-13/llvm/IR/Module.h>
 #include <map>
 #include <queue>
 #include <set>
+#include <unordered_map>
 #include <vector>
+#include <igraph/igraph.h>
 
 namespace llvm {
   class BasicBlock;
@@ -71,7 +77,9 @@ namespace klee {
       NURS_RP,
       NURS_ICnt,
       NURS_CPICnt,
-      NURS_QC
+      NURS_QC,
+      SDSE,
+      ASTAR
     };
   };
 
@@ -317,6 +325,142 @@ namespace klee {
     bool empty() override;
     void printName(llvm::raw_ostream &os) override;
   };
+
+
+struct CFGNode{
+  llvm::BasicBlock *BB;
+  std::vector<CFGNode*> Successors;
+
+};
+
+class CFG{
+  public:
+  std::map<llvm::BasicBlock*, CFGNode*> Nodes;
+
+  CFGNode*  getCFGNode(llvm::BasicBlock* BB){
+  if (Nodes.find(BB) == Nodes.end()) {
+            Nodes[BB] = new CFGNode{BB};
+        }
+        return Nodes[BB];
+  }
+  void addEdge(llvm::BasicBlock* src, llvm::BasicBlock* dst){
+    CFGNode* srcNode = getCFGNode(src);
+    CFGNode* dstNode = getCFGNode(dst);
+    srcNode->Successors.push_back(dstNode);
+  }
+  ~CFG(){
+    for(auto &node : Nodes){
+      delete node.second;
+    }
+  }
+};
+
+
+struct ICFG {
+    struct Node {
+        llvm::Function* const enclosingFunction;
+        llvm::SmallVector<llvm::Instruction*> insts;
+        llvm::BasicBlock* BB;
+        
+
+        llvm::Instruction* getTerminator() {
+            assert(!insts.empty());
+            return insts.back(); 
+        }
+
+        bool isDummy() {
+            return insts.empty();
+        }
+
+        Node(llvm::Function* enclosingFunction, llvm::BasicBlock* BB=nullptr) : 
+            enclosingFunction{enclosingFunction}, BB{BB}
+        {}
+        llvm::BasicBlock* getBB() const { return BB; }
+    };
+    llvm::DenseMap<llvm::BasicBlock*, llvm::SmallVector<std::unique_ptr<Node>>> blockToICFGNodes;
+    llvm::SmallVector<std::unique_ptr<Node>> externalFuncICFGNodes;
+    llvm::DenseMap<llvm::Instruction*, llvm::Function*> interproceduralCallEdges;
+    llvm::DenseMap<Node*, llvm::DenseSet<Node*>> icfgEdges;
+    
+    Node* getICFGNodeStartingWith(llvm::Instruction* startingInst) const;
+    explicit ICFG(llvm::Module& module, std::unordered_map<llvm::BasicBlock *, int> &bbToIndex);
+    void generateIGraph(igraph_t& i_graph);
+    void dumpToDOTFile(llvm::StringRef filename) const;
+};
+
+using ICFGNode = ICFG::Node;
+
+  /// this searcher will calculate the shortest distance between the current statement and the target statement
+  /// and will select the state with the shortest distance to the target statement
+  class SDSESearcher final : public Searcher {
+    std::vector<ExecutionState*> states;
+    int target;
+    std::string targetFile;
+    InMemoryExecutionTree *executionTree;
+    const uint8_t idBitMask;
+    CFG Mycfg;
+    std::unordered_map<llvm::BasicBlock *, int> bbToIndex;
+    ICFG icfg;
+    igraph_t i_cfg;
+    bool foundTarget = false;
+    Executor &executor;
+   
+    /// \param target defines the target statement that needs to be reached by the searcher
+
+    public:
+    explicit SDSESearcher(KModule &kmodule, InMemoryExecutionTree *executiontree, int target, std::string targetFile, Executor &executor);
+    int getTarget() const { return target; }
+    ExecutionState &selectState() override;
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) override;
+    int computeShortestPath(unsigned int target, llvm::BasicBlock *currnode, std::unordered_map<llvm::BasicBlock*, int> bbToIndex);
+    void generateCFG();
+    igraph_t getIGraph() const { return i_cfg; }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
+    KModule& kmodule; 
+  
+  
+  };
+
+
+  class ASTARSearcher final: public Searcher{
+    std::vector<ExecutionState*> states;
+    int target;
+    std::string targetFile;
+    InMemoryExecutionTree *executionTree;
+    const uint8_t idBitMask;
+    CFG Mycfg;
+    std::unordered_map<llvm::BasicBlock *, int> bbToIndex;
+    ICFG icfg;
+    igraph_t i_cfg;
+    std::unordered_map<igraph_integer_t, long> distanceToTarget;
+    std::unordered_map<llvm::BasicBlock*, int> bbReoccurence;
+    bool foundTarget = false;
+    Executor &executor;
+
+  
+    /// \param target defines the target statement that needs to be reached by the searcher
+
+    public:
+    explicit ASTARSearcher(KModule &kmodule, InMemoryExecutionTree *executiontree, int target, std::string targetFile, Executor &executor);
+    int getTarget() const { return target; }
+    ExecutionState &selectState() override;
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) override;
+    int computeASTARPath(unsigned int target, klee::ExecutionState *currestate, std::unordered_map<llvm::BasicBlock*, int> bbToIndex);
+    void generateCFG();
+    igraph_t getIGraph() const { return i_cfg; }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
+    KModule& kmodule; 
+
+
+  };
+
+  
 
 } // klee namespace
 

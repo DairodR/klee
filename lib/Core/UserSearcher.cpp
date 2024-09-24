@@ -13,6 +13,7 @@
 #include "MergeHandler.h"
 #include "Searcher.h"
 
+#include "klee/Module/KModule.h"
 #include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -47,7 +48,9 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
                    "use NURS with Instr-Count"),
         clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt",
                    "use NURS with CallPath-Instr-Count"),
-        clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")),
+        clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost"),
+        clEnumValN(Searcher::SDSE, "sdse", "use SDSE Searcher, set BOTH the KLEE_TARGET_LINE and KLEE_TARGET_FILE as env variables"), //modified
+        clEnumValN(Searcher::ASTAR, "astar", "use ASTAR Searcher, set BOTH the KLEE_TARGET_LINE and KLEE_TARGET_FILE as env variables")), //modified
     cl::cat(SearchCat));
 
 cl::opt<bool> UseIterativeDeepeningTimeSearch(
@@ -88,6 +91,7 @@ void initializeSearchOptions() {
     } else {
       CoreSearch.push_back(Searcher::RandomPath);
       CoreSearch.push_back(Searcher::NURS_CovNew);
+      CoreSearch.push_back(Searcher::SDSE);
     }
   }
 }
@@ -101,13 +105,17 @@ bool userSearcherRequiresMD2U() {
 }
 
 bool userSearcherRequiresInMemoryExecutionTree() {
-  return std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end();
+  return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::SDSE) != CoreSearch.end()) ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::ASTAR) != CoreSearch.end();
 }
+
+
 
 } // namespace klee
 
-Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
-                         InMemoryExecutionTree *executionTree) {
+Searcher *getNewSearcher(KModule &kmodule, Searcher::CoreSearchType type, RNG &rng,
+                         InMemoryExecutionTree *executionTree, Executor &executor) {
   Searcher *searcher = nullptr;
   switch (type) {
     case Searcher::DFS: searcher = new DFSSearcher(); break;
@@ -121,22 +129,25 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
     case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount, rng); break;
     case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount, rng); break;
     case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost, rng); break;
+    case Searcher::SDSE: searcher = new SDSESearcher(kmodule,executionTree, std::stoi(std::getenv("KLEE_TARGET_LINE")), std::string(std::getenv("KLEE_TARGET_FILE")), executor); break;
+    case Searcher::ASTAR: searcher = new ASTARSearcher(kmodule,executionTree, std::stoi(std::getenv("KLEE_TARGET_LINE")), std::string(std::getenv("KLEE_TARGET_FILE")), executor); break;
   }
-
+  ///PARTIALFIX: need to pass target and targetFile as arguments to SDSESearcher && ASTARSearcher, this can be done by making the cml args global,
+  ///but this might not be the most secure way to do it, so I've opted for the other solution: environment variables being set beforehand...
   return searcher;
 }
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
   auto *etree =
       llvm::dyn_cast<InMemoryExecutionTree>(executor.executionTree.get());
-  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, etree);
+  Searcher *searcher = getNewSearcher(*executor.kmodule, CoreSearch[0], executor.theRNG, etree, executor);
 
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
     for (unsigned i = 1; i < CoreSearch.size(); i++)
-      s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG, etree));
+      s.push_back(getNewSearcher(*executor.kmodule,CoreSearch[i], executor.theRNG, etree, executor));
 
     searcher = new InterleavedSearcher(s);
   }

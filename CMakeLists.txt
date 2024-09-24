@@ -730,6 +730,16 @@ endif()
 ################################################################################
 install(FILES include/klee/klee.h DESTINATION include/klee)
 
+
+################################################################################
+# Igraph install & link
+################################################################################
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(IGRAPH REQUIRED igraph)
+include_directories(${IGRAPH_INCLUDE_DIRS})
+link_directories(${IGRAPH_LIBRARY_DIRS})
+target_link_libraries(klee ${IGRAPH_LIBRARIES})
+
 ################################################################################
 # Uninstall rule
 ################################################################################
