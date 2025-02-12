@@ -36,6 +36,7 @@
 #include <igraph/igraph_paths.h>
 #include <igraph/igraph_types.h>
 #include <igraph/igraph_vector.h>
+#include <iostream>
 #include <llvm-13/llvm/ADT/GraphTraits.h>
 #include <llvm-13/llvm/ADT/PostOrderIterator.h>
 #include <llvm-13/llvm/IR/BasicBlock.h>
@@ -609,7 +610,48 @@ void InterleavedSearcher::printName(llvm::raw_ostream &os) {
 
 
 
-///
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*====================================================================================================================*/
 
 //update this searcher so that it also takes a filename as an input
 //this is necessary to get the target line number
@@ -618,6 +660,7 @@ SDSESearcher::SDSESearcher(KModule &kmodule, InMemoryExecutionTree *executionTre
         bbToIndex(), icfg(*kmodule.module.get(), bbToIndex), executor(executor), kmodule{kmodule}
       {
   assert(executionTree);
+  // std::cout << "SDSESearcher created" << std::endl;
   llvm::Module *module = kmodule.module.get();
   
 
@@ -752,7 +795,7 @@ void SDSESearcher::update(ExecutionState *current,
     igraph_destroy(&i_cfg);
     return;
   }
-  // fails here somehow
+
   states.insert(states.end(), addedStates.begin(), addedStates.end());
 
 
@@ -1085,32 +1128,12 @@ ASTARSearcher::ASTARSearcher(KModule &kmodule, InMemoryExecutionTree *executionT
   //this needs to be set when calling KLEE, as a cmdline argument
   //don't know how to do it, so ill just hardcode it for now
   ///TODO: make this a cmdline argument
-  // target is set in UesrSearcher.cpp --> need to change this!!!
-  // target = 24; // target line
 
-
-
-
-
-  //generate the CFG using A3 his code
-  //convert that to an igraph
-  // pray to the jesus that it works
 
 
   icfg.generateIGraph(i_cfg);
 
   
-
-
-
-
-
-
-
-
-
-
-
   
 
 

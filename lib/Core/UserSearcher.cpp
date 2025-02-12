@@ -17,6 +17,7 @@
 #include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
+#include <iostream>
 
 using namespace llvm;
 using namespace klee;
@@ -116,6 +117,10 @@ bool userSearcherRequiresInMemoryExecutionTree() {
 
 Searcher *getNewSearcher(KModule &kmodule, Searcher::CoreSearchType type, RNG &rng,
                          InMemoryExecutionTree *executionTree, Executor &executor) {
+  // std::cout << "HERE? B4 initializing searcher of type: " << type << std::endl;
+  std::cout << "NEXT " << std::stoi(std::getenv("KLEE_TARGET_LINE")) << std::endl;
+  std::cout << "LAST " << std::string(std::getenv("KLEE_TARGET_FILE")) << std::endl;
+
   Searcher *searcher = nullptr;
   switch (type) {
     case Searcher::DFS: searcher = new DFSSearcher(); break;
