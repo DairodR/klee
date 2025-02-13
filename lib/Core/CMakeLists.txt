@@ -27,6 +27,9 @@ add_library(kleeCore
   StatsTracker.cpp
   TimingSolver.cpp
   UserSearcher.cpp
+  SDSESearcher.cpp
+  ASTARSearcher.cpp
+  ICFG.cpp
 )
 
 target_link_libraries(kleeCore PRIVATE

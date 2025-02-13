@@ -651,755 +651,755 @@ void InterleavedSearcher::printName(llvm::raw_ostream &os) {
 
 
 
-/*====================================================================================================================*/
+// /*====================================================================================================================*/
 
-//update this searcher so that it also takes a filename as an input
-//this is necessary to get the target line number
-SDSESearcher::SDSESearcher(KModule &kmodule, InMemoryExecutionTree *executionTree, int target, std::string targetFile, Executor &executor)
-    :  target{target}, targetFile{targetFile}, executionTree{executionTree}, idBitMask{static_cast<uint8_t>(executionTree ? executionTree->getNextId() : 0)},
-        bbToIndex(), icfg(*kmodule.module.get(), bbToIndex), executor(executor), kmodule{kmodule}
-      {
-  assert(executionTree);
-  // std::cout << "SDSESearcher created" << std::endl;
-  llvm::Module *module = kmodule.module.get();
+// //update this searcher so that it also takes a filename as an input
+// //this is necessary to get the target line number
+// SDSESearcher::SDSESearcher(KModule &kmodule, InMemoryExecutionTree *executionTree, int target, std::string targetFile, Executor &executor)
+//     :  target{target}, targetFile{targetFile}, executionTree{executionTree}, idBitMask{static_cast<uint8_t>(executionTree ? executionTree->getNextId() : 0)},
+//         bbToIndex(), icfg(*kmodule.module.get(), bbToIndex), executor(executor), kmodule{kmodule}
+//       {
+//   assert(executionTree);
+//   // std::cout << "SDSESearcher created" << std::endl;
+//   llvm::Module *module = kmodule.module.get();
   
 
 
-  icfg.generateIGraph(i_cfg);
+//   icfg.generateIGraph(i_cfg);
 
   
-  //generate in memory CFG, not used anymore, keeping it here to keep it real
-  for(llvm::Function &F : *module) {
-    for(llvm::BasicBlock &BB : F) {
-      for(llvm::succ_iterator SI = succ_begin(&BB), E = succ_end(&BB); SI != E; ++SI) {
-        llvm::BasicBlock *SuccBB = *SI;
-        Mycfg.addEdge(&BB, SuccBB);
-      }
-    }
-  }
+//   //generate in memory CFG, not used anymore, keeping it here to keep it real
+//   for(llvm::Function &F : *module) {
+//     for(llvm::BasicBlock &BB : F) {
+//       for(llvm::succ_iterator SI = succ_begin(&BB), E = succ_end(&BB); SI != E; ++SI) {
+//         llvm::BasicBlock *SuccBB = *SI;
+//         Mycfg.addEdge(&BB, SuccBB);
+//       }
+//     }
+//   }
 
-  bool debug =false;
-  if(debug){
-    generateCFG();
-  }
-
-
-}
+//   bool debug =false;
+//   if(debug){
+//     generateCFG();
+//   }
 
 
+// }
 
-//change to leave out the mycfg stuff to work with icfg instead
-//should return an int with the length of the shortest path
-//this can than be used to select the state with the shortest path left to the target
-int SDSESearcher::computeShortestPath(unsigned int t, llvm::BasicBlock *currnode, std::unordered_map<llvm::BasicBlock*, int> bbToIndex) {
-        std::unordered_map<ExecutionTreeNode*, int> distances;
-        std::unordered_map<ExecutionTreeNode*, ExecutionTreeNode*> predecessors;
+
+
+// //change to leave out the mycfg stuff to work with icfg instead
+// //should return an int with the length of the shortest path
+// //this can than be used to select the state with the shortest path left to the target
+// int SDSESearcher::computeShortestPath(unsigned int t, llvm::BasicBlock *currnode, std::unordered_map<llvm::BasicBlock*, int> bbToIndex) {
+//         std::unordered_map<ExecutionTreeNode*, int> distances;
+//         std::unordered_map<ExecutionTreeNode*, ExecutionTreeNode*> predecessors;
         
         
         
         
         
         
-        llvm::raw_ostream &os = llvm::errs();
+//         llvm::raw_ostream &os = llvm::errs();
         
-        llvm::BasicBlock *target = nullptr;
+//         llvm::BasicBlock *target = nullptr;
   
 
 
-        //where do i need to go
-        for (const auto &nodePair: icfg.blockToICFGNodes){
-          llvm::BasicBlock *BB = nodePair.first;
+//         //where do i need to go
+//         for (const auto &nodePair: icfg.blockToICFGNodes){
+//           llvm::BasicBlock *BB = nodePair.first;
 
-          for (auto &inst: *BB){
-            if(llvm::DILocation *loc = inst.getDebugLoc()){
-              auto line = loc->getLine();
-              // os <<"Instruction: "<<inst << "\n";
-              // os <<"Source: "<<loc->getFilename().str() << " Line: " << line << "\n";
-              if(loc->getFilename().str() == targetFile && line == t){
-                // os << "Target line found" << "\n";
-                target = BB;
-                break;
-              }
-            }
-          }
-          if (target!=nullptr) break;
-        }
+//           for (auto &inst: *BB){
+//             if(llvm::DILocation *loc = inst.getDebugLoc()){
+//               auto line = loc->getLine();
+//               // os <<"Instruction: "<<inst << "\n";
+//               // os <<"Source: "<<loc->getFilename().str() << " Line: " << line << "\n";
+//               if(loc->getFilename().str() == targetFile && line == t){
+//                 // os << "Target line found" << "\n";
+//                 target = BB;
+//                 break;
+//               }
+//             }
+//           }
+//           if (target!=nullptr) break;
+//         }
 
-        if (!target){
-          // os << "Target not found" << "\n";
-          return -1;
-        }
-
-
-        igraph_integer_t from = bbToIndex[currnode];
-        igraph_integer_t to = bbToIndex[target];
+//         if (!target){
+//           // os << "Target not found" << "\n";
+//           return -1;
+//         }
 
 
+//         igraph_integer_t from = bbToIndex[currnode];
+//         igraph_integer_t to = bbToIndex[target];
 
-        assert(target && "Target not found");
-        // as i have access to the igraph version of the CFG, i can use the igraph library to compute the shortest path
-        // required parameters: next node(s), target node, cfg
 
-        igraph_vector_t shortestpath;
-        igraph_vector_init(&shortestpath, 0);
 
-        igraph_get_shortest_path_dijkstra(&i_cfg,&shortestpath, NULL, from, to, NULL,  IGRAPH_OUT);
+//         assert(target && "Target not found");
+//         // as i have access to the igraph version of the CFG, i can use the igraph library to compute the shortest path
+//         // required parameters: next node(s), target node, cfg
 
-        // if (igraph_vector_size(&shortestpath) > 0) {
-        //   os << "Shortest path from node " << from << " to node " << to << " is:\n";
-        //   for (int i = 0; i < igraph_vector_size(&shortestpath); ++i) {
-        //       os << VECTOR(shortestpath)[i] << " ";
-        //   }
-        //   os << "\n";
-        // } else {
-        //   os << "No path found from node " << from << " to node " << to << "\n";
-        // }
+//         igraph_vector_t shortestpath;
+//         igraph_vector_init(&shortestpath, 0);
 
-        if(from == to){
-          os<<"path completed"<<"\n";
-          foundTarget=true;
-        } 
+//         igraph_get_shortest_path_dijkstra(&i_cfg,&shortestpath, NULL, from, to, NULL,  IGRAPH_OUT);
 
-        if (igraph_vector_size(&shortestpath) > 0) {
-          return igraph_vector_size(&shortestpath);
-        } else {
-          return -1;
-        }
-        // assert(igraph_vector_size(&shortestpath) > 0 && "No path found");
+//         // if (igraph_vector_size(&shortestpath) > 0) {
+//         //   os << "Shortest path from node " << from << " to node " << to << " is:\n";
+//         //   for (int i = 0; i < igraph_vector_size(&shortestpath); ++i) {
+//         //       os << VECTOR(shortestpath)[i] << " ";
+//         //   }
+//         //   os << "\n";
+//         // } else {
+//         //   os << "No path found from node " << from << " to node " << to << "\n";
+//         // }
+
+//         if(from == to){
+//           os<<"path completed"<<"\n";
+//           foundTarget=true;
+//         } 
+
+//         if (igraph_vector_size(&shortestpath) > 0) {
+//           return igraph_vector_size(&shortestpath);
+//         } else {
+//           return -1;
+//         }
+//         // assert(igraph_vector_size(&shortestpath) > 0 && "No path found");
 
       
 
 
 
 
-      // return igraph_vector_size(&shortestpath);
-    }
+//       // return igraph_vector_size(&shortestpath);
+//     }
 
-void SDSESearcher::printName(llvm::raw_ostream &os) {
-  os << "SDSESearcher\n";
-}
+// void SDSESearcher::printName(llvm::raw_ostream &os) {
+//   os << "SDSESearcher\n";
+// }
 
-bool SDSESearcher::empty() {
-  return !IS_OUR_NODE_VALID(executionTree->root);
-}
-
-
-void SDSESearcher::update(ExecutionState *current,
-                                const std::vector<ExecutionState *> &addedStates,
-                                const std::vector<ExecutionState *> &removedStates) {
+// bool SDSESearcher::empty() {
+//   return !IS_OUR_NODE_VALID(executionTree->root);
+// }
 
 
-  if(foundTarget){
-    executor.prepareForEarlyExit();
-    executor.setHaltExecution(true);
-    igraph_destroy(&i_cfg);
-    return;
-  }
-
-  states.insert(states.end(), addedStates.begin(), addedStates.end());
+// void SDSESearcher::update(ExecutionState *current,
+//                                 const std::vector<ExecutionState *> &addedStates,
+//                                 const std::vector<ExecutionState *> &removedStates) {
 
 
+//   if(foundTarget){
+//     executor.prepareForEarlyExit();
+//     executor.setHaltExecution(true);
+//     igraph_destroy(&i_cfg);
+//     return;
+//   }
 
-  //remove states
-  for (const auto state : removedStates) {
-    auto it = std::find(states.begin(), states.end(), state);
-    assert(it != states.end() && "invalid state removed");
-    states.erase(it);
-  }
-
-}
-
-void ICFG::dumpToDOTFile(llvm::StringRef filename) const {
-    std::error_code code;
-    llvm::raw_fd_ostream outputFile(filename, code);
-    assert(code.value() == 0);
-
-    outputFile << "digraph \"ICFG\" {\n";
-
-    // we want to draw boundary boxes around functions in the ICFG
-    // first figure out which functions exist 
-    llvm::DenseSet<llvm::Function*> funcs;
-    for (auto& [bb, icfgnodes] : blockToICFGNodes) {
-        funcs.insert(bb->getParent());
-    }
-
-    // first dump all the intra-function nodes
-    // i'm using the unique in-memory node address as the label here
-    // dump them all as part of a subgraph per-function
-    size_t numNodes = 0;
-    for (auto func : funcs) {
-        outputFile << llvm::formatv("\tsubgraph cluster_{0} {\n", func->getName());
-        outputFile << llvm::formatv("\t\tlabel = \"{0}\";\n", func->getName());
-        for (auto& bb : *func) {
-            auto& icfgNodes = blockToICFGNodes.find(&bb)->getSecond();
-            for (auto& icfgnode : icfgNodes) {
-                auto line = llvm::formatv("\t\tnode{0} [shape=record,style=\"filled\",color=\"black\",penwidth=1,fillcolor=\"grey\",label=\"#block{0}\"];", (void*) icfgnode.get()).str();
-                outputFile << line << "\n";
-                numNodes++;
-            }
-        }
-        outputFile << "\tcolor=blue;\n";
-        outputFile << "\t}\n";
-    }
-
-    // then dump the dummy nodes for the library calls
-    for (auto& dummyLibFuncNode : externalFuncICFGNodes) {
-        auto line = llvm::formatv("\tnode{0} [shape=record,style=\"filled\",color=\"black\",penwidth=1,fillcolor=\"darkgrey\",label=\"{1}\"];", (void*) dummyLibFuncNode.get(), dummyLibFuncNode->enclosingFunction->getName()).str();
-        outputFile << line << "\n";
-        numNodes++;
-    }
-
-    // then dump all the edges
-    size_t numEdges = 0;
-    for (auto& [src, dests] : icfgEdges) {
-        for (auto dest : dests) {
-            auto line = llvm::formatv("\tnode{0} -> node{1} [penwidth=1];", (void*)src, (void*)dest).str();
-            outputFile << line << "\n";
-            numEdges++;
-        }
-    }
-
-    outputFile << "}\n";
-    outputFile.flush();
-    outputFile.close();
-
-    llvm::errs() << llvm::formatv("Dumped DOT graph with {0} nodes and {1} edges to {2}\n", numNodes, numEdges, filename);
-}
+//   states.insert(states.end(), addedStates.begin(), addedStates.end());
 
 
 
+//   //remove states
+//   for (const auto state : removedStates) {
+//     auto it = std::find(states.begin(), states.end(), state);
+//     assert(it != states.end() && "invalid state removed");
+//     states.erase(it);
+//   }
 
-void SDSESearcher::generateCFG() {
+// }
 
-  FILE *f = fopen("igraph_cfg.dot", "w");
-  if (f == NULL) {
-      llvm::errs() << "Error: Could not open file " << "igraph_cfg.dot" << " for writing.\n";
-      return;
-    }
+// void ICFG::dumpToDOTFile(llvm::StringRef filename) const {
+//     std::error_code code;
+//     llvm::raw_fd_ostream outputFile(filename, code);
+//     assert(code.value() == 0);
+
+//     outputFile << "digraph \"ICFG\" {\n";
+
+//     // we want to draw boundary boxes around functions in the ICFG
+//     // first figure out which functions exist 
+//     llvm::DenseSet<llvm::Function*> funcs;
+//     for (auto& [bb, icfgnodes] : blockToICFGNodes) {
+//         funcs.insert(bb->getParent());
+//     }
+
+//     // first dump all the intra-function nodes
+//     // i'm using the unique in-memory node address as the label here
+//     // dump them all as part of a subgraph per-function
+//     size_t numNodes = 0;
+//     for (auto func : funcs) {
+//         outputFile << llvm::formatv("\tsubgraph cluster_{0} {\n", func->getName());
+//         outputFile << llvm::formatv("\t\tlabel = \"{0}\";\n", func->getName());
+//         for (auto& bb : *func) {
+//             auto& icfgNodes = blockToICFGNodes.find(&bb)->getSecond();
+//             for (auto& icfgnode : icfgNodes) {
+//                 auto line = llvm::formatv("\t\tnode{0} [shape=record,style=\"filled\",color=\"black\",penwidth=1,fillcolor=\"grey\",label=\"#block{0}\"];", (void*) icfgnode.get()).str();
+//                 outputFile << line << "\n";
+//                 numNodes++;
+//             }
+//         }
+//         outputFile << "\tcolor=blue;\n";
+//         outputFile << "\t}\n";
+//     }
+
+//     // then dump the dummy nodes for the library calls
+//     for (auto& dummyLibFuncNode : externalFuncICFGNodes) {
+//         auto line = llvm::formatv("\tnode{0} [shape=record,style=\"filled\",color=\"black\",penwidth=1,fillcolor=\"darkgrey\",label=\"{1}\"];", (void*) dummyLibFuncNode.get(), dummyLibFuncNode->enclosingFunction->getName()).str();
+//         outputFile << line << "\n";
+//         numNodes++;
+//     }
+
+//     // then dump all the edges
+//     size_t numEdges = 0;
+//     for (auto& [src, dests] : icfgEdges) {
+//         for (auto dest : dests) {
+//             auto line = llvm::formatv("\tnode{0} -> node{1} [penwidth=1];", (void*)src, (void*)dest).str();
+//             outputFile << line << "\n";
+//             numEdges++;
+//         }
+//     }
+
+//     outputFile << "}\n";
+//     outputFile.flush();
+//     outputFile.close();
+
+//     llvm::errs() << llvm::formatv("Dumped DOT graph with {0} nodes and {1} edges to {2}\n", numNodes, numEdges, filename);
+// }
+
+
+
+
+// void SDSESearcher::generateCFG() {
+
+//   FILE *f = fopen("igraph_cfg.dot", "w");
+//   if (f == NULL) {
+//       llvm::errs() << "Error: Could not open file " << "igraph_cfg.dot" << " for writing.\n";
+//       return;
+//     }
   
   
-    igraph_write_graph_dot(&i_cfg, f);
-    fclose(f);
+//     igraph_write_graph_dot(&i_cfg, f);
+//     fclose(f);
   
-}
+// }
 
-void ICFG::generateIGraph(igraph_t& i_graph) {
-    // Map to store ICFGNode to vertex index mapping
-    std::unordered_map<ICFGNode*, int> nodeToIndex;
-    int index = 0;
+// void ICFG::generateIGraph(igraph_t& i_graph) {
+//     // Map to store ICFGNode to vertex index mapping
+//     std::unordered_map<ICFGNode*, int> nodeToIndex;
+//     int index = 0;
 
-    // Count the total number of nodes
-    int totalNodes = 0;
-    for (const auto& entry : blockToICFGNodes) {
-        totalNodes += entry.second.size();
-    }
-    // Initialize the igraph with the correct number of vertices
-    igraph_empty(&i_graph, totalNodes, IGRAPH_DIRECTED);
-    // Assign each ICFGNode a unique vertex index
-    for (const auto& entry : blockToICFGNodes) {
-        for (const auto& icfgNode : entry.second) {
-            nodeToIndex[icfgNode.get()] = index++;
-        }
-    }
+//     // Count the total number of nodes
+//     int totalNodes = 0;
+//     for (const auto& entry : blockToICFGNodes) {
+//         totalNodes += entry.second.size();
+//     }
+//     // Initialize the igraph with the correct number of vertices
+//     igraph_empty(&i_graph, totalNodes, IGRAPH_DIRECTED);
+//     // Assign each ICFGNode a unique vertex index
+//     for (const auto& entry : blockToICFGNodes) {
+//         for (const auto& icfgNode : entry.second) {
+//             nodeToIndex[icfgNode.get()] = index++;
+//         }
+//     }
 
-    // Add edges to the igraph
-    for (const auto& [fromNode, successors] : icfgEdges) {
-        int fromIndex = nodeToIndex[fromNode];
-        for (ICFGNode* toNode : successors) {
-            int toIndex = nodeToIndex[toNode];
-            igraph_add_edge(&i_graph, fromIndex, toIndex);
-        }
-    }
-}
-
-
-
-ICFGNode* ICFG::getICFGNodeStartingWith(llvm::Instruction* startingInst) const {
-    auto& retblockICFGNodes = blockToICFGNodes.find(startingInst->getParent())->getSecond();
-    for (auto& node : retblockICFGNodes) {
-        for (auto inst : node->insts) {
-            if (inst == startingInst)
-                return node.get();
-        }
-    }
-    assert(!"Can't find ICFG node starting with `inst`!");
-};
-
-ICFG::ICFG(llvm::Module& module, std::unordered_map<llvm::BasicBlock *, int> &bbToIndex) {
-  int index = 0;
- // first just build the ICFG nodes for all blocks, split on known calls
-    for (auto& func : module) {
-        for (auto& bb : func) {
-            auto& blockNodes = blockToICFGNodes[&bb];
-            blockNodes.emplace_back(std::make_unique<ICFGNode>(&func, &bb));
-
-            bbToIndex[&bb] = index++;
-
-            auto currentNode = [&] () -> Node* {
-                return blockNodes.back().get();
-            };
-
-            for (auto& inst : bb) {
-                currentNode()->insts.push_back(&inst);
-                if (auto call = llvm::dyn_cast<llvm::CallBase>(&inst)) {
-                    auto callee = call->getCalledFunction();
-                    if (callee) { // this is a direct call
-                        assert(!interproceduralCallEdges.count(call)); // we should only visit each call once
-                        interproceduralCallEdges[call] = callee;
-                        blockNodes.emplace_back(std::make_unique<Node>(&func, &bb));
-                    }
-                }
-            }
-
-            if (currentNode()->insts.empty())
-                blockNodes.pop_back();
-            assert(!blockNodes.empty());
-        }
-    }
-
-    // then link them all based on intraprocedural & interprocedural edges
-    // initialize the edges
-    for (auto& [bb, icfgnodes] : blockToICFGNodes) {
-        for (auto& icfgNode : icfgnodes) {
-            auto edgeIt = interproceduralCallEdges.find(icfgNode->getTerminator());
-            if (edgeIt != interproceduralCallEdges.end()) {
-                // this edge is interprocedural
-
-                // figure out the return site in the caller
-                auto callerReturnSiteICFGNode = [&] () -> ICFGNode* {
-                    ///FIXME: we do not model the exceptional flow here.
-                    auto callerReturnSite = [&] (llvm::CallBase* call) -> llvm::Instruction* {
-                        if (auto invoke = llvm::dyn_cast<llvm::InvokeInst>(call))
-                            return &invoke->getNormalDest()->front();
-                        auto next = call->getNextNode();
-                        assert(next && "if it isnt an invoke, it cant be a terminator!");
-                        return next;
-                    } (llvm::cast<llvm::CallBase>(icfgNode->getTerminator()));
-                    assert(callerReturnSite);
-                    // for invokes, the return BB may not be the same as the caller BB
-                    return getICFGNodeStartingWith(callerReturnSite);
-                } ();
-
-                auto callee = edgeIt->getSecond();
-                assert(callee);
-                ///TODO: it's annoying that the ICFG will contain infeasible flow from one callsite to all the others, through the callee
-                // i wish there was a way to avoid this, without context cloning the function (which has its own set of problems)
-                // link this icfgnode to the entry icfgnode of the callee
-                if (callee->isDeclaration()) {
-                    auto calleeICFGNode = externalFuncICFGNodes.emplace_back(std::make_unique<ICFGNode>(callee)).get();
-                    icfgEdges[icfgNode.get()].insert(calleeICFGNode);
-                    icfgEdges[calleeICFGNode].insert(callerReturnSiteICFGNode);
-                } else {
-                    auto entryBlock = &callee->getEntryBlock();
-                    auto entryICFGNode = blockToICFGNodes.find(entryBlock)->getSecond().front().get();
-                    assert(entryICFGNode->insts.front() == &entryBlock->front());
-                    icfgEdges[icfgNode.get()].insert(entryICFGNode);
-
-                    // link all normal return paths in the callee back to the normal return site in the caller
-                    ///FIXME: we ignore exceptional flow here
-                    for (auto& calleeBB : *callee) {
-                        if (auto ret = llvm::dyn_cast<llvm::ReturnInst>(calleeBB.getTerminator())) {
-                            auto retICFGNode = blockToICFGNodes.find(&calleeBB)->getSecond().back().get();
-                            assert(retICFGNode->insts.back() == ret);
-                            icfgEdges[retICFGNode].insert(callerReturnSiteICFGNode);
-                        }
-                    }
-                }
-            } else {
-                // all this node's successors are intraprocedural
-                assert(icfgNode->getTerminator() == bb->getTerminator() && "this edge should always be intraprocedural!");
-                // this is inter-block flow
-                for (auto successor : llvm::successors(bb)) {
-                    auto succICFGNode = blockToICFGNodes.find(successor)->getSecond().front().get();
-                    assert(succICFGNode->insts.front() == &successor->front());
-                    icfgEdges[icfgNode.get()].insert(succICFGNode);
-                }
-            }
-        }
-    }
-
-}
+//     // Add edges to the igraph
+//     for (const auto& [fromNode, successors] : icfgEdges) {
+//         int fromIndex = nodeToIndex[fromNode];
+//         for (ICFGNode* toNode : successors) {
+//             int toIndex = nodeToIndex[toNode];
+//             igraph_add_edge(&i_graph, fromIndex, toIndex);
+//         }
+//     }
+// }
 
 
 
+// ICFGNode* ICFG::getICFGNodeStartingWith(llvm::Instruction* startingInst) const {
+//     auto& retblockICFGNodes = blockToICFGNodes.find(startingInst->getParent())->getSecond();
+//     for (auto& node : retblockICFGNodes) {
+//         for (auto inst : node->insts) {
+//             if (inst == startingInst)
+//                 return node.get();
+//         }
+//     }
+//     assert(!"Can't find ICFG node starting with `inst`!");
+// };
 
+// ICFG::ICFG(llvm::Module& module, std::unordered_map<llvm::BasicBlock *, int> &bbToIndex) {
+//   int index = 0;
+//  // first just build the ICFG nodes for all blocks, split on known calls
+//     for (auto& func : module) {
+//         for (auto& bb : func) {
+//             auto& blockNodes = blockToICFGNodes[&bb];
+//             blockNodes.emplace_back(std::make_unique<ICFGNode>(&func, &bb));
 
+//             bbToIndex[&bb] = index++;
 
-ExecutionState &SDSESearcher::selectState() {
-  //need something to calculate said distance (graph needed)
-  //find a way to translate the targetline to a target node
-  //how does llvm get compute the CFG?
+//             auto currentNode = [&] () -> Node* {
+//                 return blockNodes.back().get();
+//             };
 
-  //use path for further logic
+//             for (auto& inst : bb) {
+//                 currentNode()->insts.push_back(&inst);
+//                 if (auto call = llvm::dyn_cast<llvm::CallBase>(&inst)) {
+//                     auto callee = call->getCalledFunction();
+//                     if (callee) { // this is a direct call
+//                         assert(!interproceduralCallEdges.count(call)); // we should only visit each call once
+//                         interproceduralCallEdges[call] = callee;
+//                         blockNodes.emplace_back(std::make_unique<Node>(&func, &bb));
+//                     }
+//                 }
+//             }
 
+//             if (currentNode()->insts.empty())
+//                 blockNodes.pop_back();
+//             assert(!blockNodes.empty());
+//         }
+//     }
 
-  
-  //check what state/line we are at
-  //use ICFG to check the distance to the target line
-  //we don't take into account the library calls
+//     // then link them all based on intraprocedural & interprocedural edges
+//     // initialize the edges
+//     for (auto& [bb, icfgnodes] : blockToICFGNodes) {
+//         for (auto& icfgNode : icfgnodes) {
+//             auto edgeIt = interproceduralCallEdges.find(icfgNode->getTerminator());
+//             if (edgeIt != interproceduralCallEdges.end()) {
+//                 // this edge is interprocedural
 
-  llvm::raw_ostream &os = llvm::outs();
+//                 // figure out the return site in the caller
+//                 auto callerReturnSiteICFGNode = [&] () -> ICFGNode* {
+//                     ///FIXME: we do not model the exceptional flow here.
+//                     auto callerReturnSite = [&] (llvm::CallBase* call) -> llvm::Instruction* {
+//                         if (auto invoke = llvm::dyn_cast<llvm::InvokeInst>(call))
+//                             return &invoke->getNormalDest()->front();
+//                         auto next = call->getNextNode();
+//                         assert(next && "if it isnt an invoke, it cant be a terminator!");
+//                         return next;
+//                     } (llvm::cast<llvm::CallBase>(icfgNode->getTerminator()));
+//                     assert(callerReturnSite);
+//                     // for invokes, the return BB may not be the same as the caller BB
+//                     return getICFGNodeStartingWith(callerReturnSite);
+//                 } ();
 
+//                 auto callee = edgeIt->getSecond();
+//                 assert(callee);
+//                 ///TODO: it's annoying that the ICFG will contain infeasible flow from one callsite to all the others, through the callee
+//                 // i wish there was a way to avoid this, without context cloning the function (which has its own set of problems)
+//                 // link this icfgnode to the entry icfgnode of the callee
+//                 if (callee->isDeclaration()) {
+//                     auto calleeICFGNode = externalFuncICFGNodes.emplace_back(std::make_unique<ICFGNode>(callee)).get();
+//                     icfgEdges[icfgNode.get()].insert(calleeICFGNode);
+//                     icfgEdges[calleeICFGNode].insert(callerReturnSiteICFGNode);
+//                 } else {
+//                     auto entryBlock = &callee->getEntryBlock();
+//                     auto entryICFGNode = blockToICFGNodes.find(entryBlock)->getSecond().front().get();
+//                     assert(entryICFGNode->insts.front() == &entryBlock->front());
+//                     icfgEdges[icfgNode.get()].insert(entryICFGNode);
 
+//                     // link all normal return paths in the callee back to the normal return site in the caller
+//                     ///FIXME: we ignore exceptional flow here
+//                     for (auto& calleeBB : *callee) {
+//                         if (auto ret = llvm::dyn_cast<llvm::ReturnInst>(calleeBB.getTerminator())) {
+//                             auto retICFGNode = blockToICFGNodes.find(&calleeBB)->getSecond().back().get();
+//                             assert(retICFGNode->insts.back() == ret);
+//                             icfgEdges[retICFGNode].insert(callerReturnSiteICFGNode);
+//                         }
+//                     }
+//                 }
+//             } else {
+//                 // all this node's successors are intraprocedural
+//                 assert(icfgNode->getTerminator() == bb->getTerminator() && "this edge should always be intraprocedural!");
+//                 // this is inter-block flow
+//                 for (auto successor : llvm::successors(bb)) {
+//                     auto succICFGNode = blockToICFGNodes.find(successor)->getSecond().front().get();
+//                     assert(succICFGNode->insts.front() == &successor->front());
+//                     icfgEdges[icfgNode.get()].insert(succICFGNode);
+//                 }
+//             }
+//         }
+//     }
 
-
-  ICFGNode *currentNode = nullptr;
-
-  bool nodeFound = false;
-
-  //where am i right now
-  // find out where the state is right now
-  for (auto es : states) {
-    auto pc = es->prevPC;
-    auto source = pc->info->file;
-    // os << "Source: " << source << "\n";
-    // if(source.find("libc") != std::string::npos || source.find("POSIX") != std::string::npos || source.find("klee") != std::string::npos){
-    //   os << "Source is a lib file \n";
-    //   continue;
-    // }
-    // else{
-    //   correct_function = true;
-    // }
-    if (icfg.blockToICFGNodes.count(pc->inst->getParent())) {
-        // os << "Found a node in the CFG corresponding to the current BB\n";
-        auto& icfgNodes =icfg.blockToICFGNodes[pc->inst->getParent()];
-        if(!icfgNodes.empty()){
-          currentNode = icfgNodes.front().get();
-          nodeFound=true;
-          // os << "Current node: " << currentNode << "\n";
-        }
-    }
-  }
-    //compare next options wrt distance to the target node, choose the one with the smallest distance
-    //if the distance is the same, choose the one with the smallest number of instructions
-    //the computeShortestPath retuns the length of the shortest path
-    //then we select the state with the shortest path left to the target
-
-
-    ///ISSUE: this is not correct, i think, right now im checking the successors of the current node
-    ///These are not yet states that can be selected from the engine's point of view
-    ///SOLUTION: if this really is the case, i need to iterate over the states available in states,
-    ///and then check the distance to the target line from those states.
-  int shortestPath = std::numeric_limits<int>::max();
-  ExecutionState *nextState_test = nullptr;
-  if(nodeFound){
-    for (auto es:states){
-      auto pc = es->pc;
-      int temp = computeShortestPath(this->getTarget(), pc->inst->getParent(), bbToIndex);
-      if (temp == -1){
-        return *states.back();
-      }
-      if (temp < shortestPath){
-        shortestPath = temp;
-        nextState_test = es;
-      }
-    }
-    return *nextState_test;
-  }
-
-
-  // if no node is found, just return the last state
-  return *states.back();
-}
+// }
 
 
 
 
 
 
+// ExecutionState &SDSESearcher::selectState() {
+//   //need something to calculate said distance (graph needed)
+//   //find a way to translate the targetline to a target node
+//   //how does llvm get compute the CFG?
 
+//   //use path for further logic
 
-
-
-
-
-
-
-
-ASTARSearcher::ASTARSearcher(KModule &kmodule, InMemoryExecutionTree *executionTree, int target, std::string targetFile, Executor &executor)
-    :  target{target}, targetFile{targetFile}, executionTree{executionTree}, idBitMask{static_cast<uint8_t>(executionTree ? executionTree->getNextId() : 0)},
-        bbToIndex(), icfg(*kmodule.module.get(), bbToIndex),  distanceToTarget(), bbReoccurence(), executor(executor) ,kmodule{kmodule}
-      {
-  assert(executionTree);
-  llvm::Module *module = kmodule.module.get();
-
-
-
-  //this needs to be set when calling KLEE, as a cmdline argument
-  //don't know how to do it, so ill just hardcode it for now
-  ///TODO: make this a cmdline argument
-
-
-
-  icfg.generateIGraph(i_cfg);
 
   
-  
+//   //check what state/line we are at
+//   //use ICFG to check the distance to the target line
+//   //we don't take into account the library calls
+
+//   llvm::raw_ostream &os = llvm::outs();
 
 
-  //generate in memory CFG, not used anymore, keeping it here to keep it real
-  for(llvm::Function &F : *module) {
-    for(llvm::BasicBlock &BB : F) {
-      for(llvm::succ_iterator SI = succ_begin(&BB), E = succ_end(&BB); SI != E; ++SI) {
-        llvm::BasicBlock *SuccBB = *SI;
-        Mycfg.addEdge(&BB, SuccBB);
-      }
-    }
-  }
 
-  // //convert the in memory cfg to an igraph one
-  // igraph_empty(&i_cfg, Mycfg.Nodes.size(), IGRAPH_DIRECTED);
+
+//   ICFGNode *currentNode = nullptr;
+
+//   bool nodeFound = false;
+
+//   //where am i right now
+//   // find out where the state is right now
+//   for (auto es : states) {
+//     auto pc = es->prevPC;
+//     auto source = pc->info->file;
+//     // os << "Source: " << source << "\n";
+//     // if(source.find("libc") != std::string::npos || source.find("POSIX") != std::string::npos || source.find("klee") != std::string::npos){
+//     //   os << "Source is a lib file \n";
+//     //   continue;
+//     // }
+//     // else{
+//     //   correct_function = true;
+//     // }
+//     if (icfg.blockToICFGNodes.count(pc->inst->getParent())) {
+//         // os << "Found a node in the CFG corresponding to the current BB\n";
+//         auto& icfgNodes =icfg.blockToICFGNodes[pc->inst->getParent()];
+//         if(!icfgNodes.empty()){
+//           currentNode = icfgNodes.front().get();
+//           nodeFound=true;
+//           // os << "Current node: " << currentNode << "\n";
+//         }
+//     }
+//   }
+//     //compare next options wrt distance to the target node, choose the one with the smallest distance
+//     //if the distance is the same, choose the one with the smallest number of instructions
+//     //the computeShortestPath retuns the length of the shortest path
+//     //then we select the state with the shortest path left to the target
+
+
+//     ///ISSUE: this is not correct, i think, right now im checking the successors of the current node
+//     ///These are not yet states that can be selected from the engine's point of view
+//     ///SOLUTION: if this really is the case, i need to iterate over the states available in states,
+//     ///and then check the distance to the target line from those states.
+//   int shortestPath = std::numeric_limits<int>::max();
+//   ExecutionState *nextState_test = nullptr;
+//   if(nodeFound){
+//     for (auto es:states){
+//       auto pc = es->pc;
+//       int temp = computeShortestPath(this->getTarget(), pc->inst->getParent(), bbToIndex);
+//       if (temp == -1){
+//         return *states.back();
+//       }
+//       if (temp < shortestPath){
+//         shortestPath = temp;
+//         nextState_test = es;
+//       }
+//     }
+//     return *nextState_test;
+//   }
+
+
+//   // if no node is found, just return the last state
+//   return *states.back();
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ASTARSearcher::ASTARSearcher(KModule &kmodule, InMemoryExecutionTree *executionTree, int target, std::string targetFile, Executor &executor)
+//     :  target{target}, targetFile{targetFile}, executionTree{executionTree}, idBitMask{static_cast<uint8_t>(executionTree ? executionTree->getNextId() : 0)},
+//         bbToIndex(), icfg(*kmodule.module.get(), bbToIndex),  distanceToTarget(), bbReoccurence(), executor(executor) ,kmodule{kmodule}
+//       {
+//   assert(executionTree);
+//   llvm::Module *module = kmodule.module.get();
+
+
+
+//   //this needs to be set when calling KLEE, as a cmdline argument
+//   //don't know how to do it, so ill just hardcode it for now
+//   ///TODO: make this a cmdline argument
+
+
+
+//   icfg.generateIGraph(i_cfg);
 
   
   
 
-  // //i_cfg is not correct... 
-  // int index = 0;
 
-  // for (const auto &nodePair : Mycfg.Nodes) {
-  //     bbToIndex[nodePair.second->BB] = index++;
-  // }
-  // for (const auto &nodePair : Mycfg.Nodes) {
-  //     llvm::BasicBlock *BB = nodePair.second->BB;
-  //     int from = bbToIndex[BB];
-  //     for (auto succ = llvm::succ_begin(BB); succ != llvm::succ_end(BB); ++succ) {
-  //         llvm::BasicBlock *succBB = *succ;
-  //         int to = bbToIndex[succBB];
-  //         igraph_add_edge(&i_cfg, from, to);
-  //     }
-  // }
+//   //generate in memory CFG, not used anymore, keeping it here to keep it real
+//   for(llvm::Function &F : *module) {
+//     for(llvm::BasicBlock &BB : F) {
+//       for(llvm::succ_iterator SI = succ_begin(&BB), E = succ_end(&BB); SI != E; ++SI) {
+//         llvm::BasicBlock *SuccBB = *SI;
+//         Mycfg.addEdge(&BB, SuccBB);
+//       }
+//     }
+//   }
+
+//   // //convert the in memory cfg to an igraph one
+//   // igraph_empty(&i_cfg, Mycfg.Nodes.size(), IGRAPH_DIRECTED);
+
+  
+  
+
+//   // //i_cfg is not correct... 
+//   // int index = 0;
+
+//   // for (const auto &nodePair : Mycfg.Nodes) {
+//   //     bbToIndex[nodePair.second->BB] = index++;
+//   // }
+//   // for (const auto &nodePair : Mycfg.Nodes) {
+//   //     llvm::BasicBlock *BB = nodePair.second->BB;
+//   //     int from = bbToIndex[BB];
+//   //     for (auto succ = llvm::succ_begin(BB); succ != llvm::succ_end(BB); ++succ) {
+//   //         llvm::BasicBlock *succBB = *succ;
+//   //         int to = bbToIndex[succBB];
+//   //         igraph_add_edge(&i_cfg, from, to);
+//   //     }
+//   // }
 
 
 
 
-  bool debug =false;
-  if(debug){
-    generateCFG();
-  }
+//   bool debug =false;
+//   if(debug){
+//     generateCFG();
+//   }
 
 
-}
-
-
-
+// }
 
 
 
-ExecutionState &ASTARSearcher::selectState() {
-  //need something to calculate said distance (graph needed)
-  //find a way to translate the targetline to a target node
-  //how does llvm get compute the CFG?
 
-  //use path for further logic
+
+
+// ExecutionState &ASTARSearcher::selectState() {
+//   //need something to calculate said distance (graph needed)
+//   //find a way to translate the targetline to a target node
+//   //how does llvm get compute the CFG?
+
+//   //use path for further logic
 
 
   
-  //check what state/line we are at
-  //use ICFG to check the distance to the target line
-  //we don't take into account the library calls
+//   //check what state/line we are at
+//   //use ICFG to check the distance to the target line
+//   //we don't take into account the library calls
 
-  llvm::raw_ostream &os = llvm::outs();
-
-
-
-
-  ICFGNode *currentNode = nullptr;
-
-  bool nodeFound = false;
-
-  //where am i right now
-  // find out where the state is right now
-  for (auto es : states) {
-    auto pc = es->prevPC;
-    auto source = pc->info->file;
-    // os << "Source: " << source << "\n";
-    // if(source.find("libc") != std::string::npos || source.find("POSIX") != std::string::npos || source.find("klee") != std::string::npos){
-    //   os << "Source is a lib file \n";
-    //   continue;
-    // }
-    // else{
-    //   correct_function = true;
-    // }
-    if (icfg.blockToICFGNodes.count(pc->inst->getParent())) {
-        // os << "Found a node in the CFG corresponding to the current BB\n";
-        auto& icfgNodes =icfg.blockToICFGNodes[pc->inst->getParent()];
-        if(!icfgNodes.empty()){
-          currentNode = icfgNodes.front().get();
-          nodeFound=true;
-          // os << "Current node: " << currentNode << "\n";
-        }
-    }
-  }
-    //compare next options wrt distance to the target node, choose the one with the smallest distance
-    //if the distance is the same, choose the one with the smallest number of instructions
-    //the computeShortestPath retuns the length of the shortest path
-    //then we select the state with the shortest path left to the target
-
-
-    ///ISSUE: this is not correct, i think, right now im checking the successors of the current node
-    ///These are not yet states that can be selected from the engine's point of view
-    ///SOLUTION: if this really is the case, i need to iterate over the states available in states,
-    ///and then check the distance to the target line from those states.
-  int shortestPath = std::numeric_limits<int>::max();
-  ExecutionState *nextState_test = nullptr;
-  if(nodeFound){
-    for (auto es:states){
-      int temp = computeASTARPath(this->getTarget(), es, bbToIndex);
-      if (temp == -1){
-        return *states.back();
-      }
-      if (temp < shortestPath){
-        shortestPath = temp;
-        nextState_test = es;
-      }
-    }
-    return *nextState_test;
-  }
-  return *states.back();
-}
+//   llvm::raw_ostream &os = llvm::outs();
 
 
 
 
+//   ICFGNode *currentNode = nullptr;
+
+//   bool nodeFound = false;
+
+//   //where am i right now
+//   // find out where the state is right now
+//   for (auto es : states) {
+//     auto pc = es->prevPC;
+//     auto source = pc->info->file;
+//     // os << "Source: " << source << "\n";
+//     // if(source.find("libc") != std::string::npos || source.find("POSIX") != std::string::npos || source.find("klee") != std::string::npos){
+//     //   os << "Source is a lib file \n";
+//     //   continue;
+//     // }
+//     // else{
+//     //   correct_function = true;
+//     // }
+//     if (icfg.blockToICFGNodes.count(pc->inst->getParent())) {
+//         // os << "Found a node in the CFG corresponding to the current BB\n";
+//         auto& icfgNodes =icfg.blockToICFGNodes[pc->inst->getParent()];
+//         if(!icfgNodes.empty()){
+//           currentNode = icfgNodes.front().get();
+//           nodeFound=true;
+//           // os << "Current node: " << currentNode << "\n";
+//         }
+//     }
+//   }
+//     //compare next options wrt distance to the target node, choose the one with the smallest distance
+//     //if the distance is the same, choose the one with the smallest number of instructions
+//     //the computeShortestPath retuns the length of the shortest path
+//     //then we select the state with the shortest path left to the target
 
 
-void ASTARSearcher::printName(llvm::raw_ostream &os) {
-  os << "ASTARSearcher\n";
-}
-
-bool ASTARSearcher::empty() {
-  return !IS_OUR_NODE_VALID(executionTree->root);
-}
-
-
-void ASTARSearcher::update(ExecutionState *current,
-                                const std::vector<ExecutionState *> &addedStates,
-                                const std::vector<ExecutionState *> &removedStates) {
-
-
-
-  // early exit if the target has been found
-  if(foundTarget){
-    executor.prepareForEarlyExit();
-    executor.setHaltExecution(true);
-    igraph_destroy(&i_cfg);
-    return;
-  }
-  states.insert(states.end(), addedStates.begin(), addedStates.end());
+//     ///ISSUE: this is not correct, i think, right now im checking the successors of the current node
+//     ///These are not yet states that can be selected from the engine's point of view
+//     ///SOLUTION: if this really is the case, i need to iterate over the states available in states,
+//     ///and then check the distance to the target line from those states.
+//   int shortestPath = std::numeric_limits<int>::max();
+//   ExecutionState *nextState_test = nullptr;
+//   if(nodeFound){
+//     for (auto es:states){
+//       int temp = computeASTARPath(this->getTarget(), es, bbToIndex);
+//       if (temp == -1){
+//         return *states.back();
+//       }
+//       if (temp < shortestPath){
+//         shortestPath = temp;
+//         nextState_test = es;
+//       }
+//     }
+//     return *nextState_test;
+//   }
+//   return *states.back();
+// }
 
 
 
 
-  //remove states
-  for (const auto state : removedStates) {
-    auto it = std::find(states.begin(), states.end(), state);
-    assert(it != states.end() && "invalid state removed");
-    states.erase(it);
-  }
 
-}
 
-void ASTARSearcher::generateCFG() {
+// void ASTARSearcher::printName(llvm::raw_ostream &os) {
+//   os << "ASTARSearcher\n";
+// }
 
-  FILE *f = fopen("igraph_cfg.dot", "w");
-  if (f == NULL) {
-      llvm::errs() << "Error: Could not open file " << "igraph_cfg.dot" << " for writing.\n";
-      return;
-    }
+// bool ASTARSearcher::empty() {
+//   return !IS_OUR_NODE_VALID(executionTree->root);
+// }
+
+
+// void ASTARSearcher::update(ExecutionState *current,
+//                                 const std::vector<ExecutionState *> &addedStates,
+//                                 const std::vector<ExecutionState *> &removedStates) {
+
+
+
+//   // early exit if the target has been found
+//   if(foundTarget){
+//     executor.prepareForEarlyExit();
+//     executor.setHaltExecution(true);
+//     igraph_destroy(&i_cfg);
+//     return;
+//   }
+//   states.insert(states.end(), addedStates.begin(), addedStates.end());
+
+
+
+
+//   //remove states
+//   for (const auto state : removedStates) {
+//     auto it = std::find(states.begin(), states.end(), state);
+//     assert(it != states.end() && "invalid state removed");
+//     states.erase(it);
+//   }
+
+// }
+
+// void ASTARSearcher::generateCFG() {
+
+//   FILE *f = fopen("igraph_cfg.dot", "w");
+//   if (f == NULL) {
+//       llvm::errs() << "Error: Could not open file " << "igraph_cfg.dot" << " for writing.\n";
+//       return;
+//     }
   
   
-    igraph_write_graph_dot(&i_cfg, f);
-    fclose(f);
+//     igraph_write_graph_dot(&i_cfg, f);
+//     fclose(f);
   
-}
+// }
 
 
 
 
-int ASTARSearcher::computeASTARPath(unsigned int t, klee::ExecutionState *currstate, std::unordered_map<llvm::BasicBlock*, int> bbToIndex) {
-        std::unordered_map<ExecutionTreeNode*, int> distances;
-        std::unordered_map<ExecutionTreeNode*, ExecutionTreeNode*> predecessors;
+// int ASTARSearcher::computeASTARPath(unsigned int t, klee::ExecutionState *currstate, std::unordered_map<llvm::BasicBlock*, int> bbToIndex) {
+//         std::unordered_map<ExecutionTreeNode*, int> distances;
+//         std::unordered_map<ExecutionTreeNode*, ExecutionTreeNode*> predecessors;
         
         
         
         
         
-        int Theta = 3; //As per the paper by De Castro Pinto et al. (2023), so hardcoded for now
-        uint32_t lambda = 0; 
-        llvm::raw_ostream &os = llvm::errs();
+//         int Theta = 3; //As per the paper by De Castro Pinto et al. (2023), so hardcoded for now
+//         uint32_t lambda = 0; 
+//         llvm::raw_ostream &os = llvm::errs();
         
-        llvm::BasicBlock *target = nullptr;
-        std::string currFile = "";  
+//         llvm::BasicBlock *target = nullptr;
+//         std::string currFile = "";  
 
 
-        //where do i need to go
-        for (const auto &nodePair: icfg.blockToICFGNodes){
-          llvm::BasicBlock *BB = nodePair.first;
+//         //where do i need to go
+//         for (const auto &nodePair: icfg.blockToICFGNodes){
+//           llvm::BasicBlock *BB = nodePair.first;
 
-          for (auto &inst: *BB){
-            if(llvm::DILocation *loc = inst.getDebugLoc()){
-              auto line = loc->getLine();
+//           for (auto &inst: *BB){
+//             if(llvm::DILocation *loc = inst.getDebugLoc()){
+//               auto line = loc->getLine();
 
-              currFile = loc->getFilename().str();
-              if(loc->getFilename().str() == targetFile && line == t){
-                // os << "Target line found" << "\n";
-                target = BB;
-                break;
-              }
-            }
-          }
-          if (target!=nullptr) break;
-        }
+//               currFile = loc->getFilename().str();
+//               if(loc->getFilename().str() == targetFile && line == t){
+//                 // os << "Target line found" << "\n";
+//                 target = BB;
+//                 break;
+//               }
+//             }
+//           }
+//           if (target!=nullptr) break;
+//         }
 
-        if (!target){
-          // os << "Target not found" << "\n";
-          return -1;
-        }
+//         if (!target){
+//           // os << "Target not found" << "\n";
+//           return -1;
+//         }
 
-        llvm::BasicBlock *currnode = currstate->pc->inst->getParent();
-        igraph_integer_t from = bbToIndex[currnode];
-        igraph_integer_t to = bbToIndex[target];    
+//         llvm::BasicBlock *currnode = currstate->pc->inst->getParent();
+//         igraph_integer_t from = bbToIndex[currnode];
+//         igraph_integer_t to = bbToIndex[target];    
 
-        uint32_t depth =  currstate->depth;
-        bbReoccurence[currnode] = bbReoccurence[currnode] + 1;
+//         uint32_t depth =  currstate->depth;
+//         bbReoccurence[currnode] = bbReoccurence[currnode] + 1;
 
 
 
-        assert(target && "Target not found");
-        // as i have access to the igraph version of the CFG, i can use the igraph library to compute the shortest path
-        // required parameters: next node(s), target node, cfg
+//         assert(target && "Target not found");
+//         // as i have access to the igraph version of the CFG, i can use the igraph library to compute the shortest path
+//         // required parameters: next node(s), target node, cfg
 
-        igraph_vector_t shortestpath;
-        igraph_vector_init(&shortestpath, 0);
+//         igraph_vector_t shortestpath;
+//         igraph_vector_init(&shortestpath, 0);
 
        
-        ///in the ASTAR algorithm, we make use of the depth, the reoccurrence and the length of the path to the target.
+//         ///in the ASTAR algorithm, we make use of the depth, the reoccurrence and the length of the path to the target.
        
        
-        igraph_get_shortest_path_dijkstra(&i_cfg,&shortestpath, NULL, from, to, NULL,  IGRAPH_OUT);
-        distanceToTarget[from] = igraph_vector_size(&shortestpath);
+//         igraph_get_shortest_path_dijkstra(&i_cfg,&shortestpath, NULL, from, to, NULL,  IGRAPH_OUT);
+//         distanceToTarget[from] = igraph_vector_size(&shortestpath);
 
 
 
-        if (bbReoccurence[currnode] > Theta){
-          lambda = std::log10(1+bbReoccurence[currnode]-Theta);
-        }
+//         if (bbReoccurence[currnode] > Theta){
+//           lambda = std::log10(1+bbReoccurence[currnode]-Theta);
+//         }
 
 
 
 
-        if(from == to){
-          os<<"path completed"<<"\n";
-          foundTarget=true;
-        } 
+//         if(from == to){
+//           os<<"path completed"<<"\n";
+//           foundTarget=true;
+//         } 
 
-        if (igraph_vector_size(&shortestpath) > 0) {
-          return depth*lambda + distanceToTarget[from];
-        } else {
-          return -1;
-        }
-        // assert(igraph_vector_size(&shortestpath) > 0 && "No path found");
+//         if (igraph_vector_size(&shortestpath) > 0) {
+//           return depth*lambda + distanceToTarget[from];
+//         } else {
+//           return -1;
+//         }
+//         // assert(igraph_vector_size(&shortestpath) > 0 && "No path found");
 
-      // return igraph_vector_size(&shortestpath);
-}
+//       // return igraph_vector_size(&shortestpath);
+// }
 
